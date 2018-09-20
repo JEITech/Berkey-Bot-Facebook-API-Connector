@@ -39,22 +39,12 @@ module.exports = {
             }
         });
     },
-    translateSticker: function(searchTerm, callback) {
-        giphy.translate({
-            s: searchTerm,
-            rating: 'pg',
-            fmt: 'json',
-            limit: 1
-        }, function(err, res) {
+    translateSticker: function(data, callback) {
+        giphy.translate(data, function(err, res) {
               callback(res);
         });
-    }, searchGifs: function(searchTerm, callback) {
-        giphy.search({
-            q: searchTerm,
-            rating: 'pg',
-            fnt: 'json',
-            limit: 1
-        }, function(err, res) {
+    }, searchGifs: function(data, callback) {
+        giphy.search(data, function(err, res) {
           callback(res);
         });
     }

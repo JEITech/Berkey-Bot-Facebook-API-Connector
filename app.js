@@ -116,7 +116,13 @@ function receivedMessage(event) {
                                     case ('Hi'):
                                         setTimeout(function() {
                                             sendTextMessage(senderID, oof.message).then(function() {
-                                                ops.searchGifs('Hello', function(data) {
+                                                var giphyData = {
+                                                    q: 'Hello',
+                                                    rating: 'pg',
+                                                    fnt: 'json',
+                                                    limit: 1
+                                                };
+                                                ops.searchGifs(giphyData, function(data) {
                                                     sendGif(senderID, data);
                                                 });
                                             });
@@ -129,7 +135,13 @@ function receivedMessage(event) {
                         } else {
                             setTimeout(function() {
                                 sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?  Thanks!").then(function() {
-                                    ops.translateSticker('sorry', function(data) {
+                                    var giphyData = {
+                                        s: 'sorry',
+                                        rating: 'pg',
+                                        fmt: 'json',
+                                        limit: 1
+                                    };
+                                    ops.translateSticker(giphyData, function(data) {
                                         sendGif(senderID, data);
                                     });
                                 });
