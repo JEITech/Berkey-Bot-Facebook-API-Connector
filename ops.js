@@ -39,14 +39,24 @@ module.exports = {
             }
         });
     },
-    translateSticker: function(data, callback) {
-        giphy.translate(data, function(err, res) {
-              callback(res);
-        });
-    }, searchGifs: function(data, callback) {
-        giphy.search(data, function(err, res) {
-          callback(res);
-        });
+    callGiphyAPI: function(type, term, callback) {
+        var data = {
+            rating: 'pg',
+            fnt: 'json',
+            limit: 1
+        }
+        switch (type) {
+            case ('translateSticker'):
+                data.s = term;
+                giphy.translate(data, function(err, res) {
+                    callback(res);
+                });
+                break;
+            default:
+                data.q = term;
+                giphy.search(data, function(err, res) {
+                    callback(res);
+                });
+        }
     }
-
 }

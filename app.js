@@ -6,7 +6,6 @@ const AWS = require('aws-sdk');
 const request = require('request');
 const ops = require('./ops');
 const giphy = require('giphy-api')('ZMOzQyQkZvQYotb2OoXpbsNB16FTwI1s');
-
 function sendTextMessage(recipientId, messageText) {
     return new Promise(function(resolve, reject) {
         var messageData = {
@@ -20,12 +19,12 @@ function sendTextMessage(recipientId, messageText) {
         callSendAPI(messageData).then(function() { resolve() });
     });
 }
-
 function sendGif(recipientId, data) {
     return new Promise(function(resolve, reject) {
         if (typeof data.message == 'string' && data.message == 'API rate limit exceeded') {
             resolve();
         } else {
+            data = data.images.fixed_width.url;
             if (typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
@@ -62,7 +61,6 @@ async function respond(recipientId, messageText) {
         await callSendAPI(messageData);
     }
 }
-
 function callSendAPI(data) {
     return new Promise(function(resolve, reject) {
         var body = JSON.stringify(data);
@@ -116,13 +114,7 @@ function receivedMessage(event) {
                                     case ('Hi'):
                                         setTimeout(function() {
                                             sendTextMessage(senderID, oof.message).then(function() {
-                                                var giphyData = {
-                                                    q: 'Hello',
-                                                    rating: 'pg',
-                                                    fnt: 'json',
-                                                    limit: 1
-                                                };
-                                                ops.searchGifs(giphyData, function(data) {
+                                                ops.callGiphyAPI('default', 'Hello', function(data) {
                                                     sendGif(senderID, data);
                                                 });
                                             });
@@ -141,7 +133,7 @@ function receivedMessage(event) {
                                         fmt: 'json',
                                         limit: 1
                                     };
-                                    ops.translateSticker(giphyData, function(data) {
+                                    ops.callGiphyAPI('translateSticker', 'Sorry', function(data) {
                                         sendGif(senderID, data);
                                     });
                                 });
