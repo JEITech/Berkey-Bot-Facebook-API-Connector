@@ -5,7 +5,7 @@ const https = require('https');
 const AWS = require('aws-sdk');
 const request = require('request');
 const ops = require('./ops');
-const giphy = require('giphy-api')('ZMOzQyQkZvQYotb2OoXpbsNB16FTwI1s');
+const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 
 function sendTextMessage(recipientId, messageText) {
     return new Promise(function(resolve, reject) {
@@ -41,7 +41,7 @@ function sendGif(recipientId, term) {
                         type: "image",
                         payload: {
                             url: data,
-                            is_reusable: true
+                            is_reusable: false
                         }
                     }
                 }
@@ -170,8 +170,6 @@ exports.handler = (event, context, callback) => {
                 entry.messaging.forEach(function(msg) {
                     if (msg.message) {
                         receivedMessage(msg);
-                    } else {
-                        console.log("Webhook received unknown event: ", event);
                     }
                 });
             });

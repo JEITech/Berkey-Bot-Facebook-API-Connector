@@ -1,6 +1,6 @@
 'use strict'
 const AWS = require('aws-sdk');
-const giphy = require('giphy-api')('ZMOzQyQkZvQYotb2OoXpbsNB16FTwI1s');
+const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 module.exports = {
     seen: function(recipientId) {
         var messageData = {
