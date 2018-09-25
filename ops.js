@@ -39,24 +39,41 @@ module.exports = {
             }
         });
     },
-    callGiphyAPI: function(type, term, callback) {
+    lexProcess: function(data) {
+        var oof = JSON.stringify(data);
+        oof = oof.replace(/\\"/g, '"');
+        oof = oof.replace(/\"{/g, '{');
+        oof = oof.replace(/\"}]}"/g, '"}]}');
+        oof = JSON.parse(oof);
+        return oof;
+    },
+    callGiphyAPI: function(term, callback) {
         var data = {
-            rating: 'pg',
+            rating: 'g',
             fmt: 'json',
+            s: term,
             limit: 1
         }
-        switch (type) {
-            case ('translateSticker'):
-                data.s = term;
-                giphy.translate(data, function(err, res) {
-                    callback(res);
-                });
-                break;
-            default:
-                data.tag = term;
-                giphy.random(data, function(err, res) {
-                    callback(res);
-                });
+        giphy.translate(data, function(err, res) {
+            callback(res);
+        });
+    },
+    fbVerify: function(event) {
+        var queryParams = event.queryStringParameters;
+        var rVerifyToken = queryParams['hub.verify_token']
+        if (rVerifyToken === VERIFY_TOKEN) {
+            var challenge = queryParams['hub.challenge']
+            var response = {
+                'body': parseInt(challenge),
+                'statusCode': 200
+            };
+            callback(null, response);
+        } else {
+            var response = {
+                'body': 'Error, wrong validation token',
+                'statusCode': 422
+            };
+            callback(null, response);
         }
     }
 }

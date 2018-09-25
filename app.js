@@ -6,6 +6,7 @@ const AWS = require('aws-sdk');
 const request = require('request');
 const ops = require('./ops');
 const giphy = require('giphy-api')('ZMOzQyQkZvQYotb2OoXpbsNB16FTwI1s');
+
 function sendTextMessage(recipientId, messageText) {
     return new Promise(function(resolve, reject) {
         var messageData = {
@@ -19,19 +20,15 @@ function sendTextMessage(recipientId, messageText) {
         callSendAPI(messageData).then(function() { resolve() });
     });
 }
-function sendGif(recipientId, data) {
+
+function sendGif(recipientId, term) {
     return new Promise(function(resolve, reject) {
-
-        try {
-
-          data = data.data.images.fixed_width.url;
-
-        }catch(err){
-
-          reject();
-
-        }
-
+        ops.callGiphyAPI(term, function(data) {
+            try {
+                data = data.data.images.fixed_width.url;
+            } catch (err) {
+                reject();
+            }
             if (typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
@@ -50,6 +47,7 @@ function sendGif(recipientId, data) {
                 }
             };
             callSendAPI(messageData).then(function() { resolve() });
+        });
     });
 }
 async function respond(recipientId, messageText) {
@@ -67,6 +65,7 @@ async function respond(recipientId, messageText) {
         await callSendAPI(messageData);
     }
 }
+
 function callSendAPI(data) {
     return new Promise(function(resolve, reject) {
         var body = JSON.stringify(data);
@@ -108,11 +107,7 @@ function receivedMessage(event) {
                         if (typeof(res) == 'string') {
                             setTimeout(function() { sendTextMessage(senderID, ('Error: ' + res)); }, 2000);
                         } else if (res.intentName !== null) {
-                            var oof = JSON.stringify(res);
-                            oof = oof.replace(/\\"/g, '"');
-                            oof = oof.replace(/\"{/g, '{');
-                            oof = oof.replace(/\"}]}"/g, '"}]}');
-                            oof = JSON.parse(oof);
+                            var oof = ops.lexProcess(res);
                             if (typeof oof.message.messages !== 'undefined') {
                                 setTimeout(function() { respond(senderID, oof.message.messages); }, 2000);
                             } else {
@@ -120,24 +115,16 @@ function receivedMessage(event) {
                                     case ('Hi'):
                                         setTimeout(function() {
                                             sendTextMessage(senderID, oof.message).then(function() {
-                                                ops.callGiphyAPI('default', 'Hello', function(data) {
-
-                                                    sendGif(senderID, data);
-
-                                                });
+                                                sendGif(senderID, 'Hello');
                                             });
                                         }, 2000);
                                         break;
                                     case ('Insult'):
-                                    setTimeout(function() {
-                                        sendTextMessage(senderID, oof.message).then(function() {
-                                            ops.callGiphyAPI('default', 'crying', function(data) {
-
-                                                sendGif(senderID, data);
-
+                                        setTimeout(function() {
+                                            sendTextMessage(senderID, oof.message).then(function() {
+                                                sendGif(senderID, 'Crying');
                                             });
-                                        });
-                                    }, 2000);
+                                        }, 2000);
                                         break;
                                     default:
                                         setTimeout(function() { sendTextMessage(senderID, oof.message); }, 2000);
@@ -146,10 +133,7 @@ function receivedMessage(event) {
                         } else {
                             setTimeout(function() {
                                 sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?  Thanks!").then(function() {
-                                    ops.callGiphyAPI('translateSticker', 'Sorry', function(data) {
-
-                                        sendGif(senderID, data);
-                                    });
+                                    sendGif(senderID, 'Sorry');
                                 });
                             }, 2000);
                         }
@@ -161,7 +145,9 @@ function receivedMessage(event) {
         callSendAPI(ops.seen(senderID)).then(function() {
             callSendAPI(ops.typing(senderID)).then(function() {
                 setTimeout(function() {
-                    sendTextMessage(senderID, "\ud83d\udc4d");
+                    sendTextMessage(senderID, "\ud83d\udc4d").then(function() {
+                        sendGif(senderID, 'cool');
+                    });
                 }, 1000);
             });
         });
@@ -169,22 +155,7 @@ function receivedMessage(event) {
 }
 exports.handler = (event, context, callback) => {
     if (event.queryStringParameters) {
-        var queryParams = event.queryStringParameters;
-        var rVerifyToken = queryParams['hub.verify_token']
-        if (rVerifyToken === VERIFY_TOKEN) {
-            var challenge = queryParams['hub.challenge']
-            var response = {
-                'body': parseInt(challenge),
-                'statusCode': 200
-            };
-            callback(null, response);
-        } else {
-            var response = {
-                'body': 'Error, wrong validation token',
-                'statusCode': 422
-            };
-            callback(null, response);
-        }
+        ops.fbVerify(event);
     } else {
         var data;
         if (typeof(event.body) == 'string') {
