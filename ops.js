@@ -49,7 +49,7 @@ module.exports = {
     },
     callGiphyAPI: function(term, callback) {
         var data = {
-            rating: 'g',
+            rating: 'y',
             fmt: 'json',
             s: term,
             limit: 1

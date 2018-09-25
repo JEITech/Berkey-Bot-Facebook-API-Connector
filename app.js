@@ -111,37 +111,29 @@ function receivedMessage(event) {
                             if (typeof oof.message.messages !== 'undefined') {
                                 setTimeout(function() { respond(senderID, oof.message.messages); }, 2000);
                             } else {
-                                switch (res.intentName) {
-                                    case ('Hi'):
-                                        setTimeout(function() {
-                                            sendTextMessage(senderID, oof.message).then(function() {
+                                setTimeout(function() {
+                                    sendTextMessage(senderID, oof.message).then(function() {
+                                        switch (res.intentName) {
+                                            case ('Hi'):
                                                 sendGif(senderID, 'Hello');
-                                            });
-                                        }, 2000);
-                                        break;
-                                    case ('Insult'):
-                                        setTimeout(function() {
-                                            sendTextMessage(senderID, oof.message).then(function() {
-                                                sendGif(senderID, 'Crying');
-                                            });
-                                        }, 2000);
-                                        break;
-
-                                    case ('Love'):
-                                        setTimeout(function(){
-                                            sendTextMessage(senderID, oof.message).then(function(){
-                                                sendGif(senderID, 'Love');
-                                            });
-                                        }, 2000);
-                                        break;
-                                    default:
-                                        setTimeout(function() { sendTextMessage(senderID, oof.message); }, 2000);
-                                }
+                                                break;
+                                            case ('Insult'):
+                                                sendGif(senderID, 'Sad');
+                                                break;
+                                            case ('Love'):
+                                                sendGif(senderID, 'I love you');
+                                                break;
+                                            case ('Bye'):
+                                                sendGif(senderID, 'Bye');
+                                            default:
+                                        }
+                                    });
+                                });
                             }
                         } else {
                             setTimeout(function() {
                                 sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?  Thanks!").then(function() {
-                                    sendGif(senderID, 'Sorry');
+                                    sendGif(senderID, 'Oops');
                                 });
                             }, 2000);
                         }
@@ -154,7 +146,7 @@ function receivedMessage(event) {
             callSendAPI(ops.typing(senderID)).then(function() {
                 setTimeout(function() {
                     sendTextMessage(senderID, "\ud83d\udc4d").then(function() {
-                        sendGif(senderID, 'cool');
+                        sendGif(senderID, 'Thumbs up');
                     });
                 }, 1000);
             });
