@@ -21,10 +21,17 @@ function sendTextMessage(recipientId, messageText) {
 }
 function sendGif(recipientId, data) {
     return new Promise(function(resolve, reject) {
-        if (typeof data.message == 'string' && data.message == 'API rate limit exceeded') {
-            resolve();
-        } else {
-            data = data.images.fixed_width.url;
+
+        try {
+
+          data = data.data.images.fixed_width.url;
+
+        }catch(err){
+
+          reject();
+
+        }
+
             if (typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
@@ -37,13 +44,12 @@ function sendGif(recipientId, data) {
                         type: "image",
                         payload: {
                             url: data,
-                            is_reusable: false
+                            is_reusable: true
                         }
                     }
                 }
             };
             callSendAPI(messageData).then(function() { resolve() });
-        }
     });
 }
 async function respond(recipientId, messageText) {
@@ -115,10 +121,23 @@ function receivedMessage(event) {
                                         setTimeout(function() {
                                             sendTextMessage(senderID, oof.message).then(function() {
                                                 ops.callGiphyAPI('default', 'Hello', function(data) {
+
                                                     sendGif(senderID, data);
+
                                                 });
                                             });
                                         }, 2000);
+                                        break;
+                                    case ('Insult'):
+                                    setTimeout(function() {
+                                        sendTextMessage(senderID, oof.message).then(function() {
+                                            ops.callGiphyAPI('default', 'crying', function(data) {
+
+                                                sendGif(senderID, data);
+
+                                            });
+                                        });
+                                    }, 2000);
                                         break;
                                     default:
                                         setTimeout(function() { sendTextMessage(senderID, oof.message); }, 2000);
@@ -127,13 +146,8 @@ function receivedMessage(event) {
                         } else {
                             setTimeout(function() {
                                 sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?  Thanks!").then(function() {
-                                    var giphyData = {
-                                        s: 'sorry',
-                                        rating: 'pg',
-                                        fmt: 'json',
-                                        limit: 1
-                                    };
                                     ops.callGiphyAPI('translateSticker', 'Sorry', function(data) {
+
                                         sendGif(senderID, data);
                                     });
                                 });

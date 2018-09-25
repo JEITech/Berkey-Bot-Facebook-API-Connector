@@ -42,7 +42,7 @@ module.exports = {
     callGiphyAPI: function(type, term, callback) {
         var data = {
             rating: 'pg',
-            fnt: 'json',
+            fmt: 'json',
             limit: 1
         }
         switch (type) {
@@ -53,8 +53,8 @@ module.exports = {
                 });
                 break;
             default:
-                data.q = term;
-                giphy.search(data, function(err, res) {
+                data.tag = term;
+                giphy.random(data, function(err, res) {
                     callback(res);
                 });
         }
