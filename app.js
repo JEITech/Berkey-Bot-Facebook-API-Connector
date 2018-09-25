@@ -126,6 +126,14 @@ function receivedMessage(event) {
                                             });
                                         }, 2000);
                                         break;
+
+                                    case ('Love'):
+                                        setTimeout(function(){
+                                            sendTextMessage(senderID, oof.message).then(function(){
+                                                sendGif(senderID, 'Love');
+                                            });
+                                        }, 2000);
+                                        break;
                                     default:
                                         setTimeout(function() { sendTextMessage(senderID, oof.message); }, 2000);
                                 }
