@@ -104,57 +104,56 @@ function receivedMessage(event) {
     var messageAttachments = message.attachments;
     //Check if message is text or multi-media
     if (messageText) {
-        //If message is text, send it to Lex to process
-        var lexData;
-        ops.lexify(messageText, senderID, function(res) {
-            lexData = res;
-        });
-        //Mark the message as seen while lexData is in the oven
+        //Mark the message as seen
         callSendAPI(ops.seen(senderID)).then(function() {
             //Leave message as 'seen' for one second
             setTimeout(function() {
                 //After one second, display typing bubble
                 callSendAPI(ops.typing(senderID)).then(function() {
-                    //Process Lex response object
-                    if (typeof(lexData) == 'string') {
-                        setTimeout(function() { sendTextMessage(senderID, ('Error: ' + lexData)); }, 2000);
-                    } else if (lexData.intentName !== null) {
-                        //Run regex on escaped messages object and parse to JSON
-                        var oof = ops.lexProcess(lexData);
-                        //Check if messages array exists, or if there is only one message to send
-                        if (typeof oof.message.messages !== 'undefined') {
-                            //Send array of messages to user in proper order
-                            setTimeout(function() { respond(senderID, oof.message.messages); }, 2000);
-                        } else {
-                            setTimeout(function() {
-                                //Send single message to user
-                                sendTextMessage(senderID, oof.message).then(function() {
-                                    //Switch based off intent to determine which GIF to send, if any
-                                    switch (lexData.intentName) {
-                                        case ('Hi'):
-                                            sendGif(senderID, 'Hello');
-                                            break;
-                                        case ('Insult'):
-                                            sendGif(senderID, 'Sad');
-                                            break;
-                                        case ('Love'):
-                                            sendGif(senderID, 'I love you');
-                                            break;
-                                        case ('Bye'):
-                                            sendGif(senderID, 'Bye');
-                                        default:
-                                    }
+                    //Send message to Lex for processing
+                    ops.lexify(messageText, senderID, function(res) {
+                        var lexData = res;
+                        //Parse Lex response object
+                        if (typeof(lexData) == 'string') {
+                            setTimeout(function() { sendTextMessage(senderID, ('Error: ' + lexData)); }, 2000);
+                        } else if (lexData.intentName !== null) {
+                            //Run regex on escaped messages object and parse to JSON
+                            var oof = ops.lexProcess(lexData);
+                            //Check if messages array exists, or if there is only one message to send
+                            if (typeof oof.message.messages !== 'undefined') {
+                                //Send array of messages to user in proper order
+                                setTimeout(function() { respond(senderID, oof.message.messages); }, 2000);
+                            } else {
+                                setTimeout(function() {
+                                    //Send single message to user
+                                    sendTextMessage(senderID, oof.message).then(function() {
+                                        //Switch based off intent to determine which GIF to send, if any
+                                        switch (lexData.intentName) {
+                                            case ('Hi'):
+                                                sendGif(senderID, 'Hello');
+                                                break;
+                                            case ('Insult'):
+                                                sendGif(senderID, 'Sad');
+                                                break;
+                                            case ('Love'):
+                                                sendGif(senderID, 'I love you');
+                                                break;
+                                            case ('Bye'):
+                                                sendGif(senderID, 'Bye');
+                                            default:
+                                        }
+                                    });
                                 });
-                            });
+                            }
+                        } else {
+                            //No intent has been found, ask the user to rephrase their message
+                            setTimeout(function() {
+                                sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?  Thanks!").then(function() {
+                                    sendGif(senderID, 'Oops');
+                                });
+                            }, 2000);
                         }
-                    } else {
-                        //No intent has been found, ask the user to rephrase their message
-                        setTimeout(function() {
-                            sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?  Thanks!").then(function() {
-                                sendGif(senderID, 'Oops');
-                            });
-                        }, 2000);
-                    }
+                    });
                 });
             }, 1000);
         });
