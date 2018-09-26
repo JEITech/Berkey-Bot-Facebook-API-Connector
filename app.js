@@ -125,7 +125,6 @@ async function receivedMessage(event) {
 
                       respond(senderID, lexData.message.messages);
 
-                      
 
                     }, 2000);
                 } else {
@@ -147,7 +146,7 @@ async function receivedMessage(event) {
                                 sendGif(senderID, 'Goodbye');
                             default:
                         }
-                    });
+                    }, 2000);
                 }
             }
         }, 1000);

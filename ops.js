@@ -40,10 +40,7 @@ module.exports = {
                     reject(err);
                 } else {
                     data = JSON.stringify(data);
-                    data = data.replace(/\\"/g, '"');
-                    data = data.replace(/\"{/g, '{');
-                    data = data.replace(/\"}]}"/g, '"}]}');
-                    data = JSON.parse(data);
+                    data = JSON.parse(data.replace(/\\"/g, '"').replace(/\"{/g, '{').replace(/\"}]}"/g, '"}]}'));
                     resolve(data);
                 }
             });
