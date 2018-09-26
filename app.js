@@ -8,7 +8,7 @@ const ops = require('./ops');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 //Accepts userID and single message.  Sends message to user
 async function sendTextMessage(recipientId, messageText) {
-    return new Promise(function(resolve, reject) {
+    return new Promise(async function(resolve, reject) {
         var messageData = {
             recipient: {
                 id: recipientId
@@ -24,9 +24,9 @@ async function sendTextMessage(recipientId, messageText) {
 }
 //Accepts userID and search term for GIPHY api.  Calls the GIPHY api, then sends gif to user
 async function sendGif(recipientId, term) {
-    return new Promise(function(resolve, reject) {
+    return new Promise(async function(resolve, reject) {
         //Call the GIPHY API
-        ops.callGiphyAPI(term, function(data) {
+        ops.callGiphyAPI(term, async function(data) {
             try {
                 data = data.data.images.fixed_width.url;
             } catch (err) {
@@ -57,18 +57,21 @@ async function sendGif(recipientId, term) {
 }
 //Accepts userID and message array.  Sends all messages to user in proper order using async/await
 async function respond(recipientId, messageText) {
-    for (var i = 0; i < messageText.length; i++) {
-        var messageData = {
-            recipient: {
-                id: recipientId
-            },
-            message: {
-                text: messageText[i].value
-            }
-        };
-        //Send message and wait for FB to confirm delivery before next loop iteration
-        await callSendAPI(messageData);
-    }
+    return new Promise(async function(resolve, reject){
+      for (var i = 0; i < messageText.length; i++) {
+          var messageData = {
+              recipient: {
+                  id: recipientId
+              },
+              message: {
+                  text: messageText[i].value
+              }
+          };
+          //Send message and wait for FB to confirm delivery before next loop iteration
+          await callSendAPI(messageData);
+      }
+      resolve();
+    });
 }
 //Accepts a message object. sends message data to FB for delivery
 function callSendAPI(data) {
@@ -123,9 +126,9 @@ async function receivedMessage(event) {
                 //Check if there are multiple messages to send, or just one
                 if (typeof lexData.message.messages !== 'undefined') {
                     //Send array of messages to user in proper order
-                    setTimeout(function() {
+                    setTimeout(async function() {
 
-                      respond(senderID, lexData.message.messages);
+                      await respond(senderID, lexData.message.messages);
 
 
                     }, 2000);

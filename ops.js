@@ -39,8 +39,7 @@ module.exports = {
                 if (err) {
                     reject(err);
                 } else {
-                    data = JSON.stringify(data);
-                    data = JSON.parse(data.replace(/\\"/g, '"').replace(/\"{/g, '{').replace(/\"}]}"/g, '"}]}'));
+                    data = JSON.parse(JSON.stringify(data).replace(/\\"/g, '"').replace(/\"{/g, '{').replace(/\"}]}"/g, '"}]}'));
                     resolve(data);
                 }
             });
