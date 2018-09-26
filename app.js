@@ -7,7 +7,7 @@ const request = require('request');
 const ops = require('./ops');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 //Accepts userID and single message.  Sends message to user
-function sendTextMessage(recipientId, messageText) {
+async function sendTextMessage(recipientId, messageText) {
     return new Promise(function(resolve, reject) {
         var messageData = {
             recipient: {
@@ -18,11 +18,12 @@ function sendTextMessage(recipientId, messageText) {
             }
         };
         //Send the message
-        callSendAPI(messageData).then(function() { resolve() });
+        await callSendAPI(messageData);
+        resolve();
     });
 }
 //Accepts userID and search term for GIPHY api.  Calls the GIPHY api, then sends gif to user
-function sendGif(recipientId, term) {
+async function sendGif(recipientId, term) {
     return new Promise(function(resolve, reject) {
         //Call the GIPHY API
         ops.callGiphyAPI(term, function(data) {
@@ -49,7 +50,8 @@ function sendGif(recipientId, term) {
                 }
             };
             //Send the GIF
-            callSendAPI(messageData).then(function() { resolve() });
+            await callSendAPI(messageData);
+            resolve();
         });
     });
 }
