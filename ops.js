@@ -54,11 +54,10 @@ module.exports = {
         var data = {
             rating: 'y',
             fmt: 'json',
-            q: term,
-            api: 'stickers',
+            s: term,
             limit: 1
         }
-        giphy.search(data, function(err, res) {
+        giphy.translate(data, function(err, res) {
             callback(res);
         });
     },
