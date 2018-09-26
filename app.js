@@ -94,7 +94,7 @@ function callSendAPI(data) {
     });
 }
 //Accepts new messsage event object.  Sends the message to Lex, then responds to the user
-function receivedMessage(event) {
+async function receivedMessage(event) {
     var senderID = event.sender.id;
     var recipientID = event.recipient.id;
     var timeOfMessage = event.timestamp;
@@ -104,71 +104,64 @@ function receivedMessage(event) {
     var messageAttachments = message.attachments;
     //Check if message is text or multi-media
     if (messageText) {
-        //Mark the message as seen
-        callSendAPI(ops.seen(senderID)).then(function() {
-            //Leave message as 'seen' for one second
-            setTimeout(function() {
-                //After one second, display typing bubble
-                callSendAPI(ops.typing(senderID)).then(function() {
-                    //Send message to Lex for processing
-                    ops.lexify(messageText, senderID, function(res) {
-                        var lexData = res;
-                        //Parse Lex response object
-                        if (typeof(lexData) == 'string') {
-                            setTimeout(function() { sendTextMessage(senderID, ('Error: ' + lexData)); }, 2000);
-                        } else if (lexData.intentName !== null) {
-                            //Run regex on escaped messages object and parse to JSON
-                            var oof = ops.lexProcess(lexData);
-                            //Check if messages array exists, or if there is only one message to send
-                            if (typeof oof.message.messages !== 'undefined') {
-                                //Send array of messages to user in proper order
-                                setTimeout(function() { respond(senderID, oof.message.messages); }, 2000);
-                            } else {
-                                setTimeout(function() {
-                                    //Send single message to user
-                                    sendTextMessage(senderID, oof.message).then(function() {
-                                        //Switch based off intent to determine which GIF to send, if any
-                                        switch (lexData.intentName) {
-                                            case ('Hi'):
-                                                sendGif(senderID, 'Hello');
-                                                break;
-                                            case ('Insult'):
-                                                sendGif(senderID, 'Sad');
-                                                break;
-                                            case ('Love'):
-                                                sendGif(senderID, 'I love you');
-                                                break;
-                                            case ('Bye'):
-                                                sendGif(senderID, 'Bye');
-                                            default:
-                                        }
-                                    });
-                                });
-                            }
-                        } else {
-                            //No intent has been found, ask the user to rephrase their message
-                            setTimeout(function() {
-                                sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?  Thanks!").then(function() {
-                                    sendGif(senderID, 'Oops');
-                                });
-                            }, 2000);
+        //Mark message as seen
+        await callSendAPI(ops.seen(senderID));
+        //Leave message as seen for 1 second, then send typing bubble
+        setTimeout(async function() {
+            await callSendAPI(ops.typing(senderID));
+            //After typing bubble is sent, process the message in lex and determine a response
+            const lexData = await ops.lexify(messageText, senderID);
+            if (lexData.intentName == null) {
+                //No intent has been found, ask the user to rephrase their message
+                setTimeout(async function() {
+                    await sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?");
+                    sendGif(senderID, 'Oops');
+                }, 2000);
+            } else {
+                //Check if there are multiple messages to send, or just one
+                if (typeof lexData.message.messages !== 'undefined') {
+                    //Send array of messages to user in proper order
+                    setTimeout(function() {
+
+                      respond(senderID, lexData.message.messages);
+
+                      
+
+                    }, 2000);
+                } else {
+                    setTimeout(async function() {
+                        //Send single message to user
+                        await sendTextMessage(senderID, lexData.message);
+                        //Switch based off intent to determine any further actions
+                        switch (lexData.intentName) {
+                            case ('Hi'):
+                                sendGif(senderID, 'Hello');
+                                break;
+                            case ('Insult'):
+                                sendGif(senderID, 'Sad');
+                                break;
+                            case ('Love'):
+                                sendGif(senderID, 'Happy');
+                                break;
+                            case ('Bye'):
+                                sendGif(senderID, 'Goodbye');
+                            default:
                         }
                     });
-                });
-            }, 1000);
-        });
+                }
+            }
+        }, 1000);
     } else if (messageAttachments) {
         //Respond to media with a thumbs up and a GIF
-        callSendAPI(ops.seen(senderID)).then(function() {
-            callSendAPI(ops.typing(senderID)).then(function() {
-                setTimeout(function() {
-                    //Send unicode for thumbsup emoji as string
-                    sendTextMessage(senderID, "\ud83d\udc4d").then(function() {
-                        sendGif(senderID, 'Thumbs up');
-                    });
-                }, 1000);
-            });
-        });
+        await callSendAPI(ops.seen(senderID))
+        setTimeout(async function() {
+            await callSendAPI(ops.typing(senderID));
+            setTimeout(async function() {
+                //Send unicode for thumbsup emoji as string
+                await sendTextMessage(senderID, "\ud83d\udc4d");
+                sendGif(senderID, 'Thumbs up');
+            }, 1000);
+        }, 1000);
     }
 }
 exports.handler = (event, context, callback) => {

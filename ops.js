@@ -2,7 +2,7 @@
 const AWS = require('aws-sdk');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 module.exports = {
-    //Accepts userID.  Return "mark as seen" object for Send API
+    //Accepts userID.  Return "mark as seen" object for Send API.
     seen: function(recipientId) {
         var messageData = {
             recipient: {
@@ -12,7 +12,7 @@ module.exports = {
         }
         return messageData;
     },
-    //Accepts userID.  Return "display typing bubble" object for Send API
+    //Accepts userID.  Return "display typing bubble" object for Send API.
     typing: function(recipientId) {
         var messageData = {
             recipient: {
@@ -22,44 +22,43 @@ module.exports = {
         }
         return messageData;
     },
-    //Accepts message string, userID, and callback function.  Send message to Lex to process
-    lexify: function(messageText, senderID, callback) {
-        AWS.config.region = 'us-west-2';
-        var lexruntime = new AWS.LexRuntime();
-        var userID = senderID;
-        var params = {
-            botAlias: "BerkeyBot",
-            botName: "BerkeyBot",
-            inputText: messageText,
-            userId: userID,
-            sessionAttributes: {}
-        };
-        lexruntime.postText(params, function(err, data) {
-            if (err) {
-                callback(JSON.stringify(err));
-            } else {
-                callback(data);
-            }
+    //Accepts message string, userID, and callback function.  Send message to Lex to process.
+    lexify: function(messageText, senderID) {
+        return new Promise(function(resolve, reject) {
+            AWS.config.region = 'us-west-2';
+            var lexruntime = new AWS.LexRuntime();
+            var userID = senderID;
+            var params = {
+                botAlias: "BerkeyBot",
+                botName: "BerkeyBot",
+                inputText: messageText,
+                userId: userID,
+                sessionAttributes: {}
+            };
+            lexruntime.postText(params, function(err, data) {
+                if (err) {
+                    reject(err);
+                } else {
+                    data = JSON.stringify(data);
+                    data = data.replace(/\\"/g, '"');
+                    data = data.replace(/\"{/g, '{');
+                    data = data.replace(/\"}]}"/g, '"}]}');
+                    data = JSON.parse(data);
+                    resolve(data);
+                }
+            });
         });
-    },
-    //Accepts a Lex array of message response.  Run regex on it to escape the backslashes
-    lexProcess: function(data) {
-        var oof = JSON.stringify(data);
-        oof = oof.replace(/\\"/g, '"');
-        oof = oof.replace(/\"{/g, '{');
-        oof = oof.replace(/\"}]}"/g, '"}]}');
-        oof = JSON.parse(oof);
-        return oof;
     },
     //Accepts search term and callback function.  Configures GIPHY search object, and sends API response to the callback.
     callGiphyAPI: function(term, callback) {
         var data = {
             rating: 'y',
             fmt: 'json',
-            s: term,
+            q: term,
+            api: 'stickers',
             limit: 1
         }
-        giphy.translate(data, function(err, res) {
+        giphy.search(data, function(err, res) {
             callback(res);
         });
     },
