@@ -3,7 +3,6 @@ const VERIFY_TOKEN = 'berkeyToken';
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const https = require('https');
 const AWS = require('aws-sdk');
-const request = require('request');
 const ops = require('./ops');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 //Accepts userID and single message.  Sends message to user
@@ -56,7 +55,7 @@ async function sendGif(recipientId, term) {
     });
 }
 //Accepts userID and message array.  Sends all messages to user in proper order using async/await
-async function respond(recipientId, messageText) {
+async function sendMultipleMessages(recipientId, messageText) {
     return new Promise(async function(resolve, reject){
       for (var i = 0; i < messageText.length; i++) {
           var messageData = {
@@ -84,22 +83,19 @@ function callSendAPI(data) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         };
-        var callback = function(response) {
-            var str = ''
-            response.on('data', function(chunk) {
-                str += chunk;
-            });
-            response.on('end', function() {
-                resolve(str);
-            });
+        var callback = function(res) {
+            let str = '';
+            res.on('data', (chunk) => { str += chunk;});
+            res.on('end', () => { resolve(str); });
         }
         var req = https.request(options, callback);
         req.write(body);
         req.end();
     });
 }
+
 //Accepts new messsage event object.  Sends the message to Lex, then responds to the user
-async function receivedMessage(event) {
+async function respond(event) {
     var senderID = event.sender.id;
     var recipientID = event.recipient.id;
     var timeOfMessage = event.timestamp;
@@ -128,7 +124,7 @@ async function receivedMessage(event) {
                     //Send array of messages to user in proper order
                     setTimeout(async function() {
 
-                      await respond(senderID, lexData.message.messages);
+                      await sendMultipleMessages(senderID, lexData.message.messages);
 
 
                     }, 2000);
@@ -182,11 +178,15 @@ exports.handler = (event, context, callback) => {
             data = event.body;
         }
         if (data.object === 'page') {
-            //Send each new message to the message handler, receivedMessage();
+            //Handle each incoming message
             data.entry.forEach(function(entry) {
-                entry.messaging.forEach(function(msg) {
+                entry.messaging.forEach(async function(msg) {
                     if (msg.message) {
-                        receivedMessage(msg);
+
+                        var user = await ops.getUserData(msg);
+                        user.goodId = msg.sender.id;
+                        user = await ops.dynamoCheck(user);
+                        respond(msg);
                     }
                 });
             });
