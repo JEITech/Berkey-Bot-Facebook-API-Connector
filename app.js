@@ -56,20 +56,20 @@ async function sendGif(recipientId, term) {
 }
 //Accepts userID and message array.  Sends all messages to user in proper order using async/await
 async function sendMultipleMessages(recipientId, messageText) {
-    return new Promise(async function(resolve, reject){
-      for (var i = 0; i < messageText.length; i++) {
-          var messageData = {
-              recipient: {
-                  id: recipientId
-              },
-              message: {
-                  text: messageText[i].value
-              }
-          };
-          //Send message and wait for FB to confirm delivery before next loop iteration
-          await callSendAPI(messageData);
-      }
-      resolve();
+    return new Promise(async function(resolve, reject) {
+        for (var i = 0; i < messageText.length; i++) {
+            var messageData = {
+                recipient: {
+                    id: recipientId
+                },
+                message: {
+                    text: messageText[i].value
+                }
+            };
+            //Send message and wait for FB to confirm delivery before next loop iteration
+            await callSendAPI(messageData);
+        }
+        resolve();
     });
 }
 //Accepts a message object. sends message data to FB for delivery
@@ -85,7 +85,7 @@ function callSendAPI(data) {
         };
         var callback = function(res) {
             let str = '';
-            res.on('data', (chunk) => { str += chunk;});
+            res.on('data', (chunk) => { str += chunk; });
             res.on('end', () => { resolve(str); });
         }
         var req = https.request(options, callback);
@@ -93,7 +93,6 @@ function callSendAPI(data) {
         req.end();
     });
 }
-
 //Accepts new messsage event object.  Sends the message to Lex, then responds to the user
 async function respond(event) {
     var senderID = event.sender.id;
@@ -123,10 +122,7 @@ async function respond(event) {
                 if (typeof lexData.message.messages !== 'undefined') {
                     //Send array of messages to user in proper order
                     setTimeout(async function() {
-
-                      await sendMultipleMessages(senderID, lexData.message.messages);
-
-
+                        await sendMultipleMessages(senderID, lexData.message.messages);
                     }, 2000);
                 } else {
                     setTimeout(async function() {
@@ -182,7 +178,6 @@ exports.handler = (event, context, callback) => {
             data.entry.forEach(function(entry) {
                 entry.messaging.forEach(async function(msg) {
                     if (msg.message) {
-
                         var user = await ops.getUserData(msg);
                         user.goodId = msg.sender.id;
                         user = await ops.dynamoCheck(user);
