@@ -7,8 +7,8 @@ const ops = require('./ops');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 //Accepts userID and single message.  Sends message to user
 async function sendTextMessage(recipientId, messageText) {
-    return new Promise(async function(resolve, reject) {
-        var messageData = {
+    return new Promise(async (resolve, reject) => {
+        const messageData = {
             recipient: {
                 id: recipientId
             },
@@ -23,7 +23,7 @@ async function sendTextMessage(recipientId, messageText) {
 }
 //Accepts userID and search term for GIPHY api.  Calls the GIPHY api, then sends gif to user
 async function sendGif(recipientId, term) {
-    return new Promise(async function(resolve, reject) {
+    return new Promise(async (resolve, reject) => {
         //Call the GIPHY API
         ops.callGiphyAPI(term, async function(data) {
             try {
@@ -34,7 +34,7 @@ async function sendGif(recipientId, term) {
             if (typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
-            var messageData = {
+            const messageData = {
                 recipient: {
                     id: recipientId
                 },
@@ -57,8 +57,9 @@ async function sendGif(recipientId, term) {
 //Accepts userID and message array.  Sends all messages to user in proper order using async/await
 async function sendMultipleMessages(recipientId, messageText) {
     return new Promise(async function(resolve, reject) {
+        let messageData = {};
         for (var i = 0; i < messageText.length; i++) {
-            var messageData = {
+            messageData = {
                 recipient: {
                     id: recipientId
                 },
@@ -75,33 +76,33 @@ async function sendMultipleMessages(recipientId, messageText) {
 //Accepts a message object. sends message data to FB for delivery
 function callSendAPI(data) {
     return new Promise(function(resolve, reject) {
-        var body = JSON.stringify(data);
-        var path = '/v2.6/me/messages?access_token=' + PAGE_ACCESS_TOKEN;
-        var options = {
+        const body = JSON.stringify(data);
+        const path = '/v2.6/me/messages?access_token=' + PAGE_ACCESS_TOKEN;
+        const options = {
             host: "graph.facebook.com",
             path: path,
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         };
-        var callback = function(res) {
+        const callback = function(res) {
             let str = '';
             res.on('data', (chunk) => { str += chunk; });
             res.on('end', () => { resolve(str); });
         }
-        var req = https.request(options, callback);
+        const req = https.request(options, callback);
         req.write(body);
         req.end();
     });
 }
 //Accepts new messsage event object.  Sends the message to Lex, then responds to the user
 async function respond(event) {
-    var senderID = event.sender.id;
-    var recipientID = event.recipient.id;
-    var timeOfMessage = event.timestamp;
-    var message = event.message;
-    var messageId = message.mid;
-    var messageText = message.text;
-    var messageAttachments = message.attachments;
+    const senderID = event.sender.id;
+    const recipientID = event.recipient.id;
+    const timeOfMessage = event.timestamp;
+    const message = event.message;
+    const messageId = message.mid;
+    const messageText = message.text;
+    const messageAttachments = message.attachments;
     //Check if message is text or multi-media
     if (messageText) {
         //Mark message as seen
@@ -178,7 +179,7 @@ exports.handler = (event, context, callback) => {
             data.entry.forEach(function(entry) {
                 entry.messaging.forEach(async function(msg) {
                     if (msg.message) {
-                        var user = await ops.getUserData(msg);
+                        let user = await ops.getUserData(msg);
                         user.goodId = msg.sender.id;
                         user = await ops.dynamoCheck(user);
                         respond(msg);
@@ -187,7 +188,7 @@ exports.handler = (event, context, callback) => {
             });
         }
         //Respond with status code 200 once execution is complete
-        var response = {
+        const response = {
             'body': "ok",
             'statusCode': 200
         };

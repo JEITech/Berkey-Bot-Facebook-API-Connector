@@ -7,8 +7,8 @@ const ops = require('./ops');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 module.exports = {
     //Accepts userID.  Return "mark as seen" object for Send API.
-    seen: (recipientId) => {
-        var messageData = {
+    seen (recipientId) {
+        const messageData = {
             recipient: {
                 id: recipientId
             },
@@ -17,8 +17,8 @@ module.exports = {
         return messageData;
     },
     //Accepts userID.  Return "display typing bubble" object for Send API.
-    typing: (recipientId) => {
-        var messageData = {
+    typing (recipientId) {
+        const messageData = {
             recipient: {
                 id: recipientId
             },
@@ -27,16 +27,15 @@ module.exports = {
         return messageData;
     },
     //Accepts message string, userID, and callback function.  Send message to Lex to process.
-    lexify: (messageText, senderID) => {
+    lexify (messageText, senderID) {
         return new Promise((resolve, reject) => {
             AWS.config.region = 'us-west-2';
-            var lexruntime = new AWS.LexRuntime();
-            var userID = senderID;
-            var params = {
+            const lexruntime = new AWS.LexRuntime();
+            const params = {
                 botAlias: "BerkeyBot",
                 botName: "BerkeyBot",
                 inputText: messageText,
-                userId: userID,
+                userId: senderID,
                 sessionAttributes: {}
             };
             lexruntime.postText(params, function(err, data) {
@@ -49,13 +48,13 @@ module.exports = {
             });
         });
     },
-    dynamoCheck: async function(user) {
+    async dynamoCheck (user) {
             return new Promise(function(resolve, reject) {
                 AWS.config.region = 'us-west-2';
-                var docClient = new AWS.DynamoDB.DocumentClient();
-                var table = 'BerkeyBotUsers';
-                var userId = Number(user.goodId);
-                var params = {
+                const docClient = new AWS.DynamoDB.DocumentClient();
+                const table = 'BerkeyBotUsers';
+                const userId = Number(user.goodId);
+                let params = {
                     TableName: table,
                     KeyConditionExpression: "#iii = :psid",
                     ExpressionAttributeNames: { "#iii": "id" },
@@ -68,7 +67,7 @@ module.exports = {
                     } else {
                         if (data.Count == 0) {
                             console.log('Adding user');
-                            var params = {
+                            params = {
                                 TableName: table,
                                 Item: {
                                     "id": userId,
@@ -76,7 +75,7 @@ module.exports = {
                                     "lastName": user.last_name
                                 }
                             };
-                            docClient.put(params, function(err, data) {
+                            docClient.put(params, (err, data) => {
                                 if (err) {
                                     console.log("Error adding user to DB! " + JSON.stringify(err));
                                     resolve();
@@ -93,10 +92,10 @@ module.exports = {
             });
         },
         //Accepts event object.  Retrieves user data from FB
-        getUserData: (data) => {
+        getUserData (data) {
             return new Promise(function(resolve, reject) {
-                var body = JSON.stringify(data);
-                var path = 'https://graph.facebook.com/' + data.sender.id + '?fields=first_name,last_name&access_token=' + PAGE_ACCESS_TOKEN;
+                const body = JSON.stringify(data);
+                const path = 'https://graph.facebook.com/' + data.sender.id + '?fields=first_name,last_name&access_token=' + PAGE_ACCESS_TOKEN;
                 https.get(path, (res) => {
                     let str = '';
                     res.on('data', (chunk) => { str += chunk; });
@@ -108,7 +107,7 @@ module.exports = {
             });
         },
         //Accepts search term and callback function.  Configures GIPHY search object, and sends API response to the callback.
-        callGiphyAPI: (term, callback) => {
+        callGiphyAPI (term, callback) {
             giphy.translate({
                 rating: 'y',
                 fmt: 'json',
@@ -119,18 +118,18 @@ module.exports = {
             });
         },
         //Accepts Lambda event object.  Verifies webhook access for FB.
-        fbVerify: function(event) {
-            var queryParams = event.queryStringParameters;
-            var rVerifyToken = queryParams['hub.verify_token']
+        fbVerify (event) {
+            const queryParams = event.queryStringParameters;
+            const rVerifyToken = queryParams['hub.verify_token']
             if (rVerifyToken === VERIFY_TOKEN) {
-                var challenge = queryParams['hub.challenge']
-                var response = {
+                const challenge = queryParams['hub.challenge']
+                const response = {
                     'body': parseInt(challenge),
                     'statusCode': 200
                 };
                 callback(null, response);
             } else {
-                var response = {
+                const response = {
                     'body': 'Error, wrong validation token',
                     'statusCode': 422
                 };
