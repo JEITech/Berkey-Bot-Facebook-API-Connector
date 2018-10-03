@@ -35,7 +35,6 @@ async function sendQuickReplies(recipientId, data, str) {
         }
         switch (data[0][0]) {
             case ('email'):
-
                 const qr = {
                     "content_type": "user_email"
                 }
@@ -167,18 +166,25 @@ async function respond(event) {
                         switch (lexData.intentName) {
                             case ('Initialize'):
                                 await sendGif(senderID, 'Greetings');
-                                  await sendQuickReplies(senderID, [ ['Yes', 'Please link my account'], ['No', 'Do not link my account'], ['Why?', 'Why link my account?'] ], 'Would you like to link your BerkeyFilters.com account?');
+                                await sendQuickReplies(senderID, [
+                                    ['Yes', 'Please link my account'],
+                                    ['No', 'Do not link my account'],
+                                    ['Why?', 'Why link my account?']
+                                ], 'Would you like to link your BerkeyFilters.com account?');
                                 break;
                             case ('whyLink'):
-                              await sendQuickReplies(senderID, [["I'm in!" , 'Please link my account'], ['No thanks', 'Do not link my account']], 'Would you like to link your BerkeyFilters.com account?');
+                                await sendQuickReplies(senderID, [
+                                    ["I'm in!", 'Please link my account'],
+                                    ['No thanks', 'Do not link my account']
+                                ], 'Would you like to link your BerkeyFilters.com account?');
                             default:
                         }
                     }, 2000);
                 } else {
                     setTimeout(async function() {
                         //Send single message to user
-                        if(lexData.message !== 'linkingCompleted'){
-                          await sendTextMessage(senderID, lexData.message);
+                        if (lexData.message !== 'linkingCompleted') {
+                            await sendTextMessage(senderID, lexData.message);
                         }
                         //Switch based off intent to determine any further actions
                         switch (lexData.intentName) {
@@ -196,12 +202,13 @@ async function respond(event) {
                                 break;
                             case ('yesLink'):
                                 if (lexData.dialogState == 'ElicitSlot' && lexData.slotToElicit == 'email') {
-                                    sendQuickReplies(senderID, [['email']], 'If this is not your email address, please type it in!');
-                                }else if (lexData.dialogState == 'Fulfilled' && lexData.message == 'linkingCompleted'){
-                                      //const storeData = await magento.getUserByEmail(lexData.slots);
-                                      sendTextMessage(senderID, 'Awesome, your account has been linked!');
-                                      const req = await dynamo.linkUser(senderID);
-
+                                    sendQuickReplies(senderID, [
+                                        ['email']
+                                    ], 'If this is not your email address, please type it in!');
+                                } else if (lexData.dialogState == 'Fulfilled' && lexData.message == 'linkingCompleted') {
+                                    //const storeData = await magento.getUserByEmail(lexData.slots);
+                                    sendTextMessage(senderID, 'Awesome, your account has been linked!');
+                                    const req = await dynamo.linkUser(senderID);
                                 }
                                 break;
                             default:
@@ -247,14 +254,14 @@ exports.handler = (event, context, callback) => {
                         user = await dynamo.userInit(user);
                         msg.dynamoData = user;
                         respond(msg);
-                    }else if(msg.postback.payload){
-                      await callSendAPI(ops.seen(msg.sender.id));
-                      let user = await ops.getUserData(msg);
-                      user.goodId = msg.sender.id;
-                      user = await dynamo.userInit(user);
-                      msg.dynamoData = user;
-                      msg.message = { text: msg.postback.payload };
-                      respond(msg);
+                    } else if (msg.postback.payload) {
+                        await callSendAPI(ops.seen(msg.sender.id));
+                        let user = await ops.getUserData(msg);
+                        user.goodId = msg.sender.id;
+                        user = await dynamo.userInit(user);
+                        msg.dynamoData = user;
+                        msg.message = { text: msg.postback.payload };
+                        respond(msg);
                     }
                 });
             });
