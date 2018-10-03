@@ -48,49 +48,6 @@ module.exports = {
             });
         });
     },
-    async dynamoCheck (user) {
-            return new Promise(function(resolve, reject) {
-                AWS.config.region = 'us-west-2';
-                const docClient = new AWS.DynamoDB.DocumentClient();
-                const table = 'BerkeyBotUsers';
-                const userId = Number(user.goodId);
-                let params = {
-                    TableName: table,
-                    KeyConditionExpression: "#iii = :psid",
-                    ExpressionAttributeNames: { "#iii": "id" },
-                    ExpressionAttributeValues: { ":psid": userId }
-                }
-                docClient.query(params, async (err, data) => {
-                    if (err) {
-                        console.log("Error accessing DB! " + JSON.stringify(err));
-                        resolve();
-                    } else {
-                        if (data.Count == 0) {
-                            console.log('Adding user');
-                            params = {
-                                TableName: table,
-                                Item: {
-                                    "id": userId,
-                                    "firstName": user.first_name,
-                                    "lastName": user.last_name
-                                }
-                            };
-                            docClient.put(params, (err, data) => {
-                                if (err) {
-                                    console.log("Error adding user to DB! " + JSON.stringify(err));
-                                    resolve();
-                                } else {
-                                    console.log("User added woo" + JSON.stringify(data));
-                                    resolve(data);
-                                }
-                            });
-                        } else {
-                            resolve(data);
-                        }
-                    }
-                });
-            });
-        },
         //Accepts event object.  Retrieves user data from FB
         getUserData (data) {
             return new Promise(function(resolve, reject) {

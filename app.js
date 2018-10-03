@@ -4,6 +4,7 @@ const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const https = require('https');
 const AWS = require('aws-sdk');
 const ops = require('./ops');
+const dynamo = require('./dynamo');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
 //Accepts userID and single message.  Sends message to user
 async function sendTextMessage(recipientId, messageText) {
@@ -21,6 +22,41 @@ async function sendTextMessage(recipientId, messageText) {
         resolve();
     });
 }
+async function sendQuickReplies(recipientId, data, str) {
+    return new Promise(async (resolve, reject) => {
+        const messageData = {
+            recipient: {
+                id: recipientId
+            },
+            message: {
+                text: str,
+                quick_replies: []
+            }
+        }
+        switch (data[0][0]) {
+            case ('email'):
+
+                const qr = {
+                    "content_type": "user_email"
+                }
+                messageData.message.quick_replies.push(qr);
+                await callSendAPI(messageData);
+                resolve();
+                break;
+            default:
+                for (let i = 0; i < data.length; i++) {
+                    const qr = {
+                        "content_type": "text",
+                        "title": data[i][0],
+                        "payload": data[i][1]
+                    }
+                    messageData.message.quick_replies.push(qr);
+                }
+                await callSendAPI(messageData);
+                resolve();
+        }
+    });
+}
 //Accepts userID and search term for GIPHY api.  Calls the GIPHY api, then sends gif to user
 async function sendGif(recipientId, term) {
     return new Promise(async (resolve, reject) => {
@@ -29,7 +65,7 @@ async function sendGif(recipientId, term) {
             try {
                 data = data.data.images.fixed_width.url;
             } catch (err) {
-                reject();
+                resolve();
             }
             if (typeof data !== 'string') {
                 data = JSON.stringify(data);
@@ -103,15 +139,19 @@ async function respond(event) {
     const messageId = message.mid;
     const messageText = message.text;
     const messageAttachments = message.attachments;
+    const messageQr = message.quick_reply;
     //Check if message is text or multi-media
     if (messageText) {
-        //Mark message as seen
-        await callSendAPI(ops.seen(senderID));
         //Leave message as seen for 1 second, then send typing bubble
         setTimeout(async function() {
             await callSendAPI(ops.typing(senderID));
             //After typing bubble is sent, process the message in lex and determine a response
-            const lexData = await ops.lexify(messageText, senderID);
+            let lexData;
+            if (typeof messageQr == 'undefined') {
+                lexData = await ops.lexify(messageText, senderID);
+            } else {
+                lexData = await ops.lexify(messageQr.payload, senderID);
+            }
             if (lexData.intentName == null) {
                 //No intent has been found, ask the user to rephrase their message
                 setTimeout(async function() {
@@ -124,6 +164,13 @@ async function respond(event) {
                     //Send array of messages to user in proper order
                     setTimeout(async function() {
                         await sendMultipleMessages(senderID, lexData.message.messages);
+                        switch (lexData.intentName) {
+                            case ('Initialize'):
+                                await sendGif(senderID, 'Greetings');
+                                  await sendQuickReplies(senderID, [ ['Yes', 'Please link my account'], ['No', 'Do not link my account'], ['Why?', 'Why link my account?'] ], 'Would you like to link your BerkeyFilters.com account?');
+                                break;
+                            default:
+                        }
                     }, 2000);
                 } else {
                     setTimeout(async function() {
@@ -142,6 +189,15 @@ async function respond(event) {
                                 break;
                             case ('Bye'):
                                 sendGif(senderID, 'Goodbye');
+                                break;
+                            case ('yesLink'):
+                                if (lexData.dialogState == 'ElicitSlot' && lexData.slotToElicit == 'email') {
+                                    sendQuickReplies(senderID, [['email']], 'If this is not your email address, please type it in!');
+                                }else if (lexData.dialogState !== 'ElicitSlot'){
+                                      //const storeData = await magento.getUserByEmail(lexData.slots);
+                                      const req = await dynamo.linkUser(senderID);
+                                }
+                                break;
                             default:
                         }
                     }, 2000);
@@ -179,9 +235,11 @@ exports.handler = (event, context, callback) => {
             data.entry.forEach(function(entry) {
                 entry.messaging.forEach(async function(msg) {
                     if (msg.message) {
+                        await callSendAPI(ops.seen(msg.sender.id));
                         let user = await ops.getUserData(msg);
                         user.goodId = msg.sender.id;
-                        user = await ops.dynamoCheck(user);
+                        user = await dynamo.userInit(user);
+                        msg.dynamoData = user;
                         respond(msg);
                     }
                 });
