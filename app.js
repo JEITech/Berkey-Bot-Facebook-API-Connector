@@ -169,13 +169,17 @@ async function respond(event) {
                                 await sendGif(senderID, 'Greetings');
                                   await sendQuickReplies(senderID, [ ['Yes', 'Please link my account'], ['No', 'Do not link my account'], ['Why?', 'Why link my account?'] ], 'Would you like to link your BerkeyFilters.com account?');
                                 break;
+                            case ('whyLink'):
+                              await sendQuickReplies(senderID, [["I'm in!" , 'Please link my account'], ['No thanks', 'Do not link my account']], 'Would you like to link your BerkeyFilters.com account?');
                             default:
                         }
                     }, 2000);
                 } else {
                     setTimeout(async function() {
                         //Send single message to user
-                        await sendTextMessage(senderID, lexData.message);
+                        if(lexData.message !== 'linkingCompleted'){
+                          await sendTextMessage(senderID, lexData.message);
+                        }
                         //Switch based off intent to determine any further actions
                         switch (lexData.intentName) {
                             case ('Hi'):
@@ -193,9 +197,11 @@ async function respond(event) {
                             case ('yesLink'):
                                 if (lexData.dialogState == 'ElicitSlot' && lexData.slotToElicit == 'email') {
                                     sendQuickReplies(senderID, [['email']], 'If this is not your email address, please type it in!');
-                                }else if (lexData.dialogState !== 'ElicitSlot'){
+                                }else if (lexData.dialogState == 'Fulfilled' && lexData.message == 'linkingCompleted'){
                                       //const storeData = await magento.getUserByEmail(lexData.slots);
+                                      sendTextMessage(senderID, 'Awesome, your account has been linked!');
                                       const req = await dynamo.linkUser(senderID);
+
                                 }
                                 break;
                             default:
@@ -241,6 +247,14 @@ exports.handler = (event, context, callback) => {
                         user = await dynamo.userInit(user);
                         msg.dynamoData = user;
                         respond(msg);
+                    }else if(msg.postback.payload){
+                      await callSendAPI(ops.seen(msg.sender.id));
+                      let user = await ops.getUserData(msg);
+                      user.goodId = msg.sender.id;
+                      user = await dynamo.userInit(user);
+                      msg.dynamoData = user;
+                      msg.message = { text: msg.postback.payload };
+                      respond(msg);
                     }
                 });
             });
