@@ -185,15 +185,14 @@ async function respond(event) {
             if (lexData.intentName == null) {
                 //No intent has been found, ask the user to rephrase their message
                 setTimeout(async function() {
-                    await sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?");
-                    await sendGif(senderID, 'Oops');
-                    sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, 'I would love to connect you with a human who can help!');
+                    await sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  I've made a note of this so someone can help teach me how to respond to this!");
+                    sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, "If I haven't been very helpful, please give us a call!");
                 }, 2000);
             } else {
                 //Check if there are multiple messages to send, or just one
                 if (typeof lexData.message.messages !== 'undefined') {
                     //Send array of messages to user in proper order
-                    setTimeout(async function() {
+                    setTimeout(async () => {
                         await sendMultipleMessages(senderID, lexData.message.messages);
                         switch (lexData.intentName) {
                             case ('Initialize'):
@@ -254,6 +253,7 @@ async function respond(event) {
                                     const req = await dynamo.linkUser(senderID);
                                 }
                                 break;
+
                             case ('needHuman'):
                                 sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, 'Here you go!');
                                 break;
@@ -264,6 +264,7 @@ async function respond(event) {
                             case ('whyLink'):
                             case ('Humans'):
                             case ('Sorry'):
+                            case ('OrderStatus'):
                             break;
                             default:
                             await sendQuickReplies(senderID, [
