@@ -22,6 +22,7 @@ async function sendTextMessage(recipientId, messageText) {
         resolve();
     });
 }
+//Accepts userID, array of quick replies, and message.  Sends all to user.
 async function sendQuickReplies(recipientId, data, str) {
     return new Promise(async (resolve, reject) => {
         const messageData = {
@@ -33,6 +34,7 @@ async function sendQuickReplies(recipientId, data, str) {
                 quick_replies: []
             }
         }
+        //Check for special use cases, default to for loop
         switch (data[0][0]) {
             case ('email'):
                 const qr = {
@@ -44,7 +46,7 @@ async function sendQuickReplies(recipientId, data, str) {
                 break;
             default:
                 for (let i = 0; i < data.length; i++) {
-                    const qr = {
+                    let qr = {
                         "content_type": "text",
                         "title": data[i][0],
                         "payload": data[i][1]
@@ -55,6 +57,35 @@ async function sendQuickReplies(recipientId, data, str) {
                 resolve();
         }
     });
+}
+async function sendButton(recipientId, button, str){
+  return new Promise(async (resolve, reject) => {
+    const messageData = {
+      recipient:{
+        id:recipientId
+      },
+      message:{
+        attachment:{
+          type:"template",
+          payload:{
+            template_type:"button",
+            text:str,
+            buttons:[
+              {
+                type: button.type,
+                title: button.title,
+                payload: button.payload
+              }
+            ]
+          }
+        }
+      }
+    }
+    //Send the button
+    await callSendAPI(messageData);
+    resolve();
+
+  });
 }
 //Accepts userID and search term for GIPHY api.  Calls the GIPHY api, then sends gif to user
 async function sendGif(recipientId, term) {
@@ -91,7 +122,7 @@ async function sendGif(recipientId, term) {
 }
 //Accepts userID and message array.  Sends all messages to user in proper order using async/await
 async function sendMultipleMessages(recipientId, messageText) {
-    return new Promise(async function(resolve, reject) {
+    return new Promise(async (resolve, reject) => {
         let messageData = {};
         for (var i = 0; i < messageText.length; i++) {
             messageData = {
@@ -110,7 +141,7 @@ async function sendMultipleMessages(recipientId, messageText) {
 }
 //Accepts a message object. sends message data to FB for delivery
 function callSendAPI(data) {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         const body = JSON.stringify(data);
         const path = '/v2.6/me/messages?access_token=' + PAGE_ACCESS_TOKEN;
         const options = {
@@ -155,7 +186,8 @@ async function respond(event) {
                 //No intent has been found, ask the user to rephrase their message
                 setTimeout(async function() {
                     await sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  Could you try rephrasing your message for me?");
-                    sendGif(senderID, 'Oops');
+                    await sendGif(senderID, 'Oops');
+                    sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, 'I would love to connect you with a human who can help!');
                 }, 2000);
             } else {
                 //Check if there are multiple messages to send, or just one
@@ -177,7 +209,15 @@ async function respond(event) {
                                     ["I'm in!", 'Please link my account'],
                                     ['No thanks', 'Do not link my account']
                                 ], 'Would you like to link your BerkeyFilters.com account?');
+                                break;
+                            case ('Help'):
+                            case ('HowAreYou'):
+                            break;
                             default:
+                              await sendQuickReplies(senderID, [
+                                ['This helped, thanks!', 'Thanks'],
+                                ["This didn't help.", 'I need a human']
+                              ], 'Was I able to help?');
                         }
                     }, 2000);
                 } else {
@@ -200,6 +240,9 @@ async function respond(event) {
                             case ('Bye'):
                                 sendGif(senderID, 'Goodbye');
                                 break;
+                            case ('Joke'):
+                                sendGif(senderID, 'Funny');
+                                break;
                             case ('yesLink'):
                                 if (lexData.dialogState == 'ElicitSlot' && lexData.slotToElicit == 'email') {
                                     sendQuickReplies(senderID, [
@@ -211,7 +254,22 @@ async function respond(event) {
                                     const req = await dynamo.linkUser(senderID);
                                 }
                                 break;
+                            case ('needHuman'):
+                                sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, 'Here you go!');
+                                break;
+                            case ('Thanks'):
+                            case ('GoAway'):
+                            case ('HowAreYou'):
+                            case ('noLink'):
+                            case ('whyLink'):
+                            case ('Humans'):
+                            case ('Sorry'):
+                            break;
                             default:
+                            await sendQuickReplies(senderID, [
+                              ['This helped, thanks!', 'Thanks'],
+                              ["This didn't help.", 'I need a human']
+                            ], 'Was I able to help you today?');
                         }
                     }, 2000);
                 }
@@ -219,7 +277,6 @@ async function respond(event) {
         }, 1000);
     } else if (messageAttachments) {
         //Respond to media with a thumbs up and a GIF
-        await callSendAPI(ops.seen(senderID))
         setTimeout(async function() {
             await callSendAPI(ops.typing(senderID));
             setTimeout(async function() {
@@ -248,18 +305,16 @@ exports.handler = (event, context, callback) => {
             data.entry.forEach(function(entry) {
                 entry.messaging.forEach(async function(msg) {
                     if (msg.message) {
-                        await callSendAPI(ops.seen(msg.sender.id));
+                        callSendAPI(ops.seen(msg.sender.id));
                         let user = await ops.getUserData(msg);
                         user.goodId = msg.sender.id;
-                        user = await dynamo.userInit(user);
-                        msg.dynamoData = user;
+                        msg.dynamoData = await dynamo.userInit(user);
                         respond(msg);
-                    } else if (msg.postback.payload) {
-                        await callSendAPI(ops.seen(msg.sender.id));
+                    } else if (msg.postback) {
+                        callSendAPI(ops.seen(msg.sender.id));
                         let user = await ops.getUserData(msg);
                         user.goodId = msg.sender.id;
-                        user = await dynamo.userInit(user);
-                        msg.dynamoData = user;
+                        msg.dynamoData = await dynamo.userInit(user);
                         msg.message = { text: msg.postback.payload };
                         respond(msg);
                     }
