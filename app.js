@@ -161,7 +161,7 @@ function callSendAPI(data) {
     });
 }
 //Accepts new messsage event object.  Sends the message to Lex, then responds to the user
-async function respond(event) {
+async function respond(event, user) {
     const senderID = event.sender.id;
     const recipientID = event.recipient.id;
     const timeOfMessage = event.timestamp;
@@ -182,99 +182,123 @@ async function respond(event) {
             } else {
                 lexData = await ops.lexify(messageQr.payload, senderID);
             }
-            if (lexData.intentName == null) {
-                //No intent has been found, ask the user to rephrase their message
-                setTimeout(async function() {
-                    await sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  I've made a note of this so someone can help teach me how to respond to this!");
-                    sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, "If I haven't been very helpful, please give us a call!");
-                }, 2000);
-            } else {
-                //Check if there are multiple messages to send, or just one
-                if (typeof lexData.message.messages !== 'undefined') {
-                    //Send array of messages to user in proper order
-                    setTimeout(async () => {
-                        await sendMultipleMessages(senderID, lexData.message.messages);
-                        switch (lexData.intentName) {
-                            case ('Initialize'):
-                                await sendGif(senderID, 'Greetings');
+            console.log(lexData);
+            console.log("Hello");
+            if(lexData.multipleFound){
+              console.log("Send the QRs");
+              const intents = [];
+
+              for(let i = 0; i < lexData.multiple.length; i++){
+
+                let qr = [];
+                qr.push(lexData.multiple[i].intentName);
+                qr.push(lexData.multiple[i].intentName);
+                intents.push(qr);
+
+              }
+              console.log(intents);
+              await sendQuickReplies(senderID, intents, 'I detected multiple questions!  I can only handle one at a time.  Were you asking about one of these topics?');
+              console.log("Sent QRs");
+            }else{
+              if (lexData.intentName == null) {
+                  //No intent has been found, ask the user to rephrase their message
+                  setTimeout(async function() {
+                      const greet = "Hello, " + user.first_name + "!";
+                      await sendTextMessage(senderID, greet )
+                      await sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  I've made a note of this so someone can help teach me how to respond to this!");
+                      sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, "If I haven't been very helpful, please give us a call!");
+                  }, 2000);
+              } else {
+                  //Check if there are multiple messages to send, or just one
+                  if (typeof lexData.message.messages !== 'undefined') {
+                      //Send array of messages to user in proper order
+                      const greet = "Hello, " + user.first_name + "!";
+                      await sendTextMessage(senderID, greet);
+                      setTimeout(async () => {
+                          await sendMultipleMessages(senderID, lexData.message.messages);
+                          switch (lexData.intentName) {
+                              case ('Initialize'):
+                                  await sendGif(senderID, 'Greetings');
+                                  await sendQuickReplies(senderID, [
+                                      ['Yes', 'Please link my account'],
+                                      ['No', 'Do not link my account']
+                                  ], 'Do you have a BerkeyFilters.com account?');
+                                  break;
+                              case ('whyLink'):
+                                  await sendQuickReplies(senderID, [
+                                      ["I'm in!", 'Please link my account'],
+                                      ['No thanks', 'Do not link my account']
+                                  ], 'Would you like to link your BerkeyFilters.com account?');
+                                  break;
+                              case ('Help'):
+                              case ('HowAreYou'):
+                              break;
+                              default:
                                 await sendQuickReplies(senderID, [
-                                    ['Yes', 'Please link my account'],
-                                    ['No', 'Do not link my account'],
-                                    ['Why?', 'Why link my account?']
-                                ], 'Would you like to link your BerkeyFilters.com account?');
-                                break;
-                            case ('whyLink'):
-                                await sendQuickReplies(senderID, [
-                                    ["I'm in!", 'Please link my account'],
-                                    ['No thanks', 'Do not link my account']
-                                ], 'Would you like to link your BerkeyFilters.com account?');
-                                break;
-                            case ('Help'):
-                            case ('HowAreYou'):
-                            break;
-                            default:
+                                  ['This helped, thanks!', 'Thanks'],
+                                  ["This didn't help.", 'I need a human']
+                                ], 'Was I able to help?');
+                          }
+                      }, 2000);
+                  } else {
+                      setTimeout(async function() {
+                          //Send single message to user
+                          if (lexData.message !== 'linkingCompleted') {
+                        
+                              await sendTextMessage(senderID, lexData.message);
+                          }
+                          //Switch based off intent to determine any further actions
+                          switch (lexData.intentName) {
+                              case ('Hi'):
+                                  sendGif(senderID, 'Hello');
+                                  break;
+                              case ('Insult'):
+                                  sendGif(senderID, 'Sad');
+                                  break;
+                              case ('Love'):
+                                  sendGif(senderID, 'Happy');
+                                  break;
+                              case ('Bye'):
+                                  sendGif(senderID, 'Goodbye');
+                                  break;
+                              case ('Joke'):
+                                  sendGif(senderID, 'Funny');
+                                  break;
+                              case ('yesLink'):
+                                  if (lexData.dialogState == 'ElicitSlot' && lexData.slotToElicit == 'email') {
+                                      sendQuickReplies(senderID, [
+                                          ['email']
+                                      ], 'If this is not your email address, please type it in!');
+                                  } else if (lexData.dialogState == 'Fulfilled' && lexData.message == 'linkingCompleted') {
+                                      //const storeData = await magento.getUserByEmail(lexData.slots);
+                                      sendTextMessage(senderID, 'Awesome, your account has been linked!');
+                                      const req = await dynamo.linkUser(senderID);
+                                  }
+                                  break;
+
+                              case ('needHuman'):
+                                  sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, 'Here you go!');
+                                  break;
+                              case ('Thanks'):
+                              case ('GoAway'):
+                              case ('HowAreYou'):
+                              case ('noLink'):
+                              case ('whyLink'):
+                              case ('Humans'):
+                              case ('Sorry'):
+                              case ('OrderStatus'):
+                              break;
+                              default:
                               await sendQuickReplies(senderID, [
                                 ['This helped, thanks!', 'Thanks'],
                                 ["This didn't help.", 'I need a human']
-                              ], 'Was I able to help?');
-                        }
-                    }, 2000);
-                } else {
-                    setTimeout(async function() {
-                        //Send single message to user
-                        if (lexData.message !== 'linkingCompleted') {
-                            await sendTextMessage(senderID, lexData.message);
-                        }
-                        //Switch based off intent to determine any further actions
-                        switch (lexData.intentName) {
-                            case ('Hi'):
-                                sendGif(senderID, 'Hello');
-                                break;
-                            case ('Insult'):
-                                sendGif(senderID, 'Sad');
-                                break;
-                            case ('Love'):
-                                sendGif(senderID, 'Happy');
-                                break;
-                            case ('Bye'):
-                                sendGif(senderID, 'Goodbye');
-                                break;
-                            case ('Joke'):
-                                sendGif(senderID, 'Funny');
-                                break;
-                            case ('yesLink'):
-                                if (lexData.dialogState == 'ElicitSlot' && lexData.slotToElicit == 'email') {
-                                    sendQuickReplies(senderID, [
-                                        ['email']
-                                    ], 'If this is not your email address, please type it in!');
-                                } else if (lexData.dialogState == 'Fulfilled' && lexData.message == 'linkingCompleted') {
-                                    //const storeData = await magento.getUserByEmail(lexData.slots);
-                                    sendTextMessage(senderID, 'Awesome, your account has been linked!');
-                                    const req = await dynamo.linkUser(senderID);
-                                }
-                                break;
-
-                            case ('needHuman'):
-                                sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170'}, 'Here you go!');
-                                break;
-                            case ('Thanks'):
-                            case ('GoAway'):
-                            case ('HowAreYou'):
-                            case ('noLink'):
-                            case ('whyLink'):
-                            case ('Humans'):
-                            case ('Sorry'):
-                            case ('OrderStatus'):
-                            break;
-                            default:
-                            await sendQuickReplies(senderID, [
-                              ['This helped, thanks!', 'Thanks'],
-                              ["This didn't help.", 'I need a human']
-                            ], 'Was I able to help you today?');
-                        }
-                    }, 2000);
-                }
+                              ], 'Was I able to help you today?');
+                          }
+                      }, 2000);
+                  }
+              }
             }
+
         }, 1000);
     } else if (messageAttachments) {
         //Respond to media with a thumbs up and a GIF
@@ -288,7 +312,7 @@ async function respond(event) {
         }, 1000);
     }
 }
-exports.handler = (event, context, callback) => {
+exports.handler =  (event, context, callback) => {
     //Check if need to verify FB Webhook
     if (event.queryStringParameters) {
         //Verify FB Webhook
@@ -310,7 +334,7 @@ exports.handler = (event, context, callback) => {
                         let user = await ops.getUserData(msg);
                         user.goodId = msg.sender.id;
                         msg.dynamoData = await dynamo.userInit(user);
-                        respond(msg);
+                        respond(msg, user);
                     } else if (msg.postback) {
                         callSendAPI(ops.seen(msg.sender.id));
                         let user = await ops.getUserData(msg);
