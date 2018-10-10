@@ -6,6 +6,15 @@ const AWS = require('aws-sdk');
 const ops = require('./ops');
 const dynamo = require('./dynamo');
 const giphy = require('giphy-api')(process.env.GIPHY_ACCESS_TOKEN);
+const dashbot = require('dashbot')('Y9XyrdJbUMjk7fYcdJu5H7aoc8ttKQeoVQ6FgA9J').generic;
+
+class dashData {
+  constructor(text, userId, fb){
+    this.text = text;
+    this.userId = userId;
+    this.fb = fb;
+  }
+}
 //Accepts userID and single message.  Sends message to user
 async function sendTextMessage(recipientId, messageText) {
     return new Promise(async (resolve, reject) => {
@@ -140,7 +149,7 @@ async function sendMultipleMessages(recipientId, messageText) {
     });
 }
 //Accepts a message object. sends message data to FB for delivery
-function callSendAPI(data) {
+function callSendAPI(data, intent) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify(data);
         const path = '/v2.6/me/messages?access_token=' + PAGE_ACCESS_TOKEN;
@@ -159,6 +168,13 @@ function callSendAPI(data) {
         req.write(body);
         req.end();
     });
+}
+//Sends data to Dashbot when interaction is complete
+function dashbotEnd (data){
+   dashbot.logOutgoing(reqData, {
+       'body': "ok",
+       'statusCode': 200
+   });
 }
 //Accepts new messsage event object.  Sends the message to Lex, then responds to the user
 async function respond(event, user) {
@@ -239,12 +255,15 @@ async function respond(event, user) {
                                   ["This didn't help.", 'I need a human']
                                 ], 'Was I able to help?');
                           }
+                          let analytics = new dashData(msg.text, msg.sender.id, event);
+                          analytics.intent = {"name":lexData.intentName};
+                          dashbot.logOutgoing(analytics);;
                       }, 2000);
                   } else {
                       setTimeout(async function() {
                           //Send single message to user
                           if (lexData.message !== 'linkingCompleted') {
-                        
+
                               await sendTextMessage(senderID, lexData.message);
                           }
                           //Switch based off intent to determine any further actions
@@ -293,7 +312,10 @@ async function respond(event, user) {
                                 ['This helped, thanks!', 'Thanks'],
                                 ["This didn't help.", 'I need a human']
                               ], 'Was I able to help you today?');
-                          }
+                          };
+                          let analytics = new dashData(msg.text, msg.sender.id, msg);
+                          analytics.intent = {"name":lexData.intentName};
+                          dashbot.logIncoming(analytics);;
                       }, 2000);
                   }
               }
@@ -308,6 +330,9 @@ async function respond(event, user) {
                 //Send unicode for thumbsup emoji as string
                 await sendTextMessage(senderID, "\ud83d\udc4d");
                 sendGif(senderID, 'Thumbs up');
+                let analytics = new dashData(msg.text, msg.sender.id, msg);
+                analytics.intent = {"name":'MediaMessage'};
+                dashbot.logIncoming(analytics);
             }, 1000);
         }, 1000);
     }
@@ -331,6 +356,8 @@ exports.handler =  (event, context, callback) => {
                 entry.messaging.forEach(async function(msg) {
                     if (msg.message) {
                         callSendAPI(ops.seen(msg.sender.id));
+                        let analytics = new dashData(msg.text, msg.sender.id, msg);
+                        dashbot.logIncoming(analytics);
                         let user = await ops.getUserData(msg);
                         user.goodId = msg.sender.id;
                         msg.dynamoData = await dynamo.userInit(user);

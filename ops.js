@@ -82,7 +82,7 @@ module.exports = {
                       logStr += JSON.stringify(lexer);
                       console.log(JSON.stringify(lexer));
                       let checkDupes = dupes(intents, lexer);
-                      if (checkDupes && typeof lexer.intentName == 'string' && lexer.message !== 'none' && lexer.intentName !== 'Bye' && lexer.intentName !== 'GoAway' && lexer.intentName !== 'Thanks' && lexer.intentName !== 'Hi' && lexer.intentName !== 'Help' && lexer.intentName !== 'Insult') {
+                      if (checkDupes && typeof lexer.intentName == 'string' && lexer.message !== 'none' && lexer.intentName !== 'Bye' && lexer.intentName !== 'Sorry' && lexer.intentName !== 'Initialize' && lexer.intentName !== 'GoAway' && lexer.intentName !== 'Thanks' && lexer.intentName !== 'Hi' && lexer.intentName !== 'Help' && lexer.intentName !== 'Insult') {
                           logStr += 'Should push to intents now';
                           console.log("Pushing to intents " + JSON.stringify(lexer))
                           intents.push(lexer);
