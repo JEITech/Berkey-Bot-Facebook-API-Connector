@@ -56,8 +56,6 @@ async function respond(event, user) {
                 if (lexData.intentName == null) {
                     //No intent has been found, ask the user to rephrase their message
                     setTimeout(async function() {
-                        const greet = "Hello, " + user.first_name + "!";
-                        await fb.sendTextMessage(senderID, greet)
                         await fb.sendTextMessage(senderID, "I'm sorry, I wasn't quite able to understand you.  I've made a note of this so someone can help teach me how to respond to this!");
                         fb.sendButton(senderID, { type: 'phone_number', title: 'Call Berkey Filters', payload: '1-800-350-4170' }, "If I haven't been very helpful, please give us a call!");
                     }, 2000);
@@ -65,8 +63,6 @@ async function respond(event, user) {
                     //Check if there are multiple messages to send, or just one
                     if (typeof lexData.message.messages !== 'undefined') {
                         //Send array of messages to user in proper order
-                        const greet = "Hello, " + user.first_name + "!";
-                        await fb.sendTextMessage(senderID, greet);
                         setTimeout(async () => {
                             await fb.sendMultipleMessages(senderID, lexData.message.messages);
                             switch (lexData.intentName) {
@@ -126,7 +122,7 @@ async function respond(event, user) {
                                         ], 'If this is not your email address, please type it in!');
                                     } else if (lexData.dialogState == 'Fulfilled' && lexData.message == 'linkingCompleted') {
                                         //const storeData = await magento.getUserByEmail(lexData.slots);
-                                        fb.sendTextMessage(senderID, 'Awesome, your account has been linked!');
+                                        fb.sendTextMessage(senderID, 'Awesome, your account has been linked!  You will now receive updates on any orders you place.');
                                         const req = await dynamo.linkUser(senderID);
                                     }
                                     break;

@@ -16,7 +16,7 @@ class fbAction{
 class fbMessage {
   constructor(recipientId, messageText){
     this.recipient = {"id": recipientId};
-    this.message = {"text": messageText};
+    this.message = {"text": messageText.replace(/&gt;/g, '>')};
   }
 }
 //For sending media, quick replies, or other media messages
@@ -32,7 +32,7 @@ class fbAttachment {
   }
 }
 //Accepts a message object. sends message data to FB for delivery
-function callSendAPI(data, intent) {
+function callSendAPI(data) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify(data);
         const path = '/v2.6/me/messages?access_token=' + PAGE_ACCESS_TOKEN;
